@@ -1,120 +1,129 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useState } from 'react'
 import './App.css'
 
+const initialItems = [
+  { id: 1, name: 'Burrata & tomatoes', category: 'Starters', price: 16, description: 'Creamy burrata, ripe tomatoes, basil oil, grilled sourdough.', image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80' },
+  { id: 2, name: 'Roasted carrots', category: 'Starters', price: 13, description: 'Honey-roasted carrots, whipped feta, dukkah, orange zest.', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80' },
+  { id: 3, name: 'Brown butter gnocchi', category: 'Mains', price: 24, description: 'Potato gnocchi, sage brown butter, toasted hazelnuts, parmesan.', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80' },
+  { id: 4, name: 'Crispy-skin salmon', category: 'Mains', price: 29, description: 'Pan-seared salmon, crushed potatoes, greens, lemon caper butter.', image: 'https://images.unsplash.com/photo-1466220838312-3e9b9c9b9b81?auto=format&fit=crop&w=800&q=80' },
+  { id: 5, name: 'Warm apple tart', category: 'Desserts', price: 12, description: 'Buttery pastry, orchard apples, vanilla ice cream, salted caramel.', image: 'https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?auto=format&fit=crop&w=800&q=80' },
+  { id: 6, name: 'Garden lemonade', category: 'Drinks', price: 7, description: 'Fresh lemon, rosemary syrup, sparkling water.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765edfd7?auto=format&fit=crop&w=800&q=80' },
+]
+
+const categories = ['All', 'Starters', 'Mains', 'Desserts', 'Drinks']
+const blankItem = { name: '', category: 'Starters', price: '', description: '', image: '' }
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [items, setItems] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('menu-items')) || initialItems
+    } catch (error) {
+      console.error('Could not read the saved menu.', error)
+      return initialItems
+    }
+  })
+  const [isEditing, setIsEditing] = useState(false)
+  const [category, setCategory] = useState('All')
+  const [form, setForm] = useState(blankItem)
+  const [editingId, setEditingId] = useState(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('menu-items', JSON.stringify(items))
+    } catch (error) {
+      console.error('Could not save the menu in this browser.', error)
+    }
+  }, [items])
+
+  const visibleItems = category === 'All'
+    ? items
+    : items.filter((item) => item.category === category)
+
+  function editItem(item) {
+    setEditingId(item.id)
+    setForm({ ...item, price: String(item.price) })
+  }
+
+  function saveItem(event) {
+    event.preventDefault()
+    const item = { ...form, id: editingId ?? Date.now(), price: Number(form.price) }
+    setItems((current) => editingId
+      ? current.map((existing) => existing.id === editingId ? item : existing)
+      : [...current, item])
+    setForm(blankItem)
+    setEditingId(null)
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+      <header className="header">
+        <a className="logo" href="#top">olive <span>&</span> oak</a>
+        <a className="nav-link" href="#menu">Our menu</a>
+        <button className="manage-button" onClick={() => setIsEditing(!isEditing)}>
+          {isEditing ? 'Done' : 'Manage menu'}
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <main id="top">
+        <section className="hero">
+          <p>GOOD FOOD, GATHERED</p>
+          <h1>A little something<br />for everyone.</h1>
+          <span>Seasonal plates, made fresh and best shared around the table.</span>
+          <a href="#menu">Explore the menu ↓</a>
+        </section>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <section className="menu" id="menu">
+          <p className="eyebrow">MADE FRESH DAILY</p>
+          <h2>On the menu</h2>
+          <p className="intro">A few of our favourite things, made with care.</p>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+          {isEditing && (
+            <div className="editor">
+              <p>Menu editing is on. Changes are saved in this browser.</p>
+              <form onSubmit={saveItem}>
+                <input aria-label="Dish name" placeholder="Dish name" value={form.name} required onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <select aria-label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                  {categories.slice(1).map((name) => <option key={name}>{name}</option>)}
+                </select>
+                <input aria-label="Price" type="number" min="0" step="0.01" placeholder="Price" value={form.price} required onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                <input aria-label="Description" placeholder="Description" value={form.description} required onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <input aria-label="Image URL" type="url" placeholder="Photo URL (optional)" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+                <button className="add-button" type="submit">{editingId ? 'Save changes' : 'Add dish'}</button>
+                {editingId && <button className="cancel-button" type="button" onClick={() => { setEditingId(null); setForm(blankItem) }}>Cancel</button>}
+              </form>
+            </div>
+          )}
+
+          <div className="filters" aria-label="Menu categories">
+            {categories.map((name) => (
+              <button className={category === name ? 'active' : ''} key={name} onClick={() => setCategory(name)}>{name}</button>
+            ))}
+          </div>
+
+          <div className="menu-grid">
+            {visibleItems.map((item) => (
+              <article className="dish" key={item.id}>
+                <img src={item.image || initialItems[0].image} alt={item.name} />
+                <div className="dish-info">
+                  <div className="dish-title"><h3>{item.name}</h3><span>${Number(item.price).toFixed(2)}</span></div>
+                  <p>{item.description}</p>
+                  {isEditing && <div className="item-actions">
+                    <button onClick={() => editItem(item)}>Edit</button>
+                    <button onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}>Remove</button>
+                  </div>}
+                </div>
+              </article>
+            ))}
+          </div>
+          {visibleItems.length === 0 && <p className="empty">No dishes in this category yet.</p>}
+        </section>
+
+        <footer className="footer">
+          <strong>olive <span>&</span> oak</strong>
+          <span>Good food tastes better together.</span>
+          <span>Open daily · 11:30 am — 9:00 pm</span>
+        </footer>
+      </main>
     </>
   )
 }
