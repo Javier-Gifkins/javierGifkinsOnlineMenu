@@ -1,39 +1,55 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
-const initialItems = [
-  { id: 1, name: 'Burrata & tomatoes', category: 'Starters', price: 16, description: 'Creamy burrata, ripe tomatoes, basil oil, grilled sourdough.', image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80' },
-  { id: 2, name: 'Roasted carrots', category: 'Starters', price: 13, description: 'Honey-roasted carrots, whipped feta, dukkah, orange zest.', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80' },
-  { id: 3, name: 'Brown butter gnocchi', category: 'Mains', price: 24, description: 'Potato gnocchi, sage brown butter, toasted hazelnuts, parmesan.', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80' },
-  { id: 4, name: 'Crispy-skin salmon', category: 'Mains', price: 29, description: 'Pan-seared salmon, crushed potatoes, greens, lemon caper butter.', image: 'https://images.unsplash.com/photo-1466220838312-3e9b9c9b9b81?auto=format&fit=crop&w=800&q=80' },
-  { id: 5, name: 'Warm apple tart', category: 'Desserts', price: 12, description: 'Buttery pastry, orchard apples, vanilla ice cream, salted caramel.', image: 'https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?auto=format&fit=crop&w=800&q=80' },
-  { id: 6, name: 'Garden lemonade', category: 'Drinks', price: 7, description: 'Fresh lemon, rosemary syrup, sparkling water.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765edfd7?auto=format&fit=crop&w=800&q=80' },
-]
-
 const categories = ['All', 'Starters', 'Mains', 'Desserts', 'Drinks']
 const blankItem = { name: '', category: 'Starters', price: '', description: '', image: '' }
+const fallbackImage = 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80'
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    credentials: 'same-origin',
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+  })
+  const data = response.status === 204 ? null : await response.json()
+
+  if (!response.ok) {
+    throw new Error(data?.error || `Request failed (${response.status}).`)
+  }
+  return data
+}
 
 function App() {
-  const [items, setItems] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('menu-items')) || initialItems
-    } catch (error) {
-      console.error('Could not read the saved menu.', error)
-      return initialItems
-    }
-  })
+  const [items, setItems] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [category, setCategory] = useState('All')
   const [form, setForm] = useState(blankItem)
   const [editingId, setEditingId] = useState(null)
+  const [loginPassword, setLoginPassword] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    try {
-      localStorage.setItem('menu-items', JSON.stringify(items))
-    } catch (error) {
-      console.error('Could not save the menu in this browser.', error)
-    }
-  }, [items])
+    let isMounted = true
+    Promise.all([apiRequest('/api/menu'), apiRequest('/api/auth/session')])
+      .then(([menu, session]) => {
+        if (!isMounted) return
+        setItems(menu)
+        setIsAdmin(session.authenticated)
+      })
+      .catch((requestError) => {
+        if (isMounted) setError(`Could not connect to the menu service. ${requestError.message}`)
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false)
+      })
+
+    return () => { isMounted = false }
+  }, [])
 
   const visibleItems = category === 'All'
     ? items
@@ -44,14 +60,69 @@ function App() {
     setForm({ ...item, price: String(item.price) })
   }
 
-  function saveItem(event) {
+  async function saveItem(event) {
     event.preventDefault()
-    const item = { ...form, id: editingId ?? Date.now(), price: Number(form.price) }
-    setItems((current) => editingId
-      ? current.map((existing) => existing.id === editingId ? item : existing)
-      : [...current, item])
-    setForm(blankItem)
-    setEditingId(null)
+    setError('')
+    const item = { ...form, price: Number(form.price) }
+
+    try {
+      const savedItem = await apiRequest(
+        editingId ? `/api/menu/${encodeURIComponent(editingId)}` : '/api/menu',
+        {
+          method: editingId ? 'PUT' : 'POST',
+          body: JSON.stringify(item),
+        },
+      )
+      setItems((current) => editingId
+        ? current.map((existing) => existing.id === editingId ? savedItem : existing)
+        : [...current, savedItem])
+      setForm(blankItem)
+      setEditingId(null)
+    } catch (requestError) {
+      setError(`Could not save the menu item. ${requestError.message}`)
+    }
+  }
+
+  async function removeItem(id) {
+    setError('')
+    try {
+      await apiRequest(`/api/menu/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      setItems((current) => current.filter((item) => item.id !== id))
+      if (editingId === id) {
+        setEditingId(null)
+        setForm(blankItem)
+      }
+    } catch (requestError) {
+      setError(`Could not remove the menu item. ${requestError.message}`)
+    }
+  }
+
+  async function login(event) {
+    event.preventDefault()
+    setError('')
+    try {
+      await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ password: loginPassword }),
+      })
+      setIsAdmin(true)
+      setLoginPassword('')
+    } catch (requestError) {
+      setError(`Could not log in. ${requestError.message}`)
+    }
+  }
+
+  async function logout() {
+    setError('')
+    try {
+      await apiRequest('/api/auth/logout', { method: 'POST' })
+      setIsAdmin(false)
+      setIsEditing(false)
+      setEditingId(null)
+      setForm(blankItem)
+    } catch (requestError) {
+      setError(`Could not log out. ${requestError.message}`)
+    }
   }
 
   return (
@@ -59,8 +130,12 @@ function App() {
       <header className="header">
         <a className="logo" href="#top">olive <span>&</span> oak</a>
         <a className="nav-link" href="#menu">Our menu</a>
-        <button className="manage-button" onClick={() => setIsEditing(!isEditing)}>
-          {isEditing ? 'Done' : 'Manage menu'}
+        <button
+          className="manage-button"
+          disabled={isLoading}
+          onClick={() => setIsEditing(!isEditing)}
+        >
+          {isEditing ? (isAdmin ? 'Done' : 'Close') : 'Manage menu'}
         </button>
       </header>
 
@@ -91,22 +166,45 @@ function App() {
             <p className="intro">Simple, seasonal ingredients.<br />Thoughtful plates worth sharing.</p>
           </div>
 
-          {isEditing && (
+          {isEditing && !isAdmin && (
             <div className="editor">
-              <p>Menu editing is on. Changes are saved in this browser.</p>
+              <p>Log in to manage the menu.</p>
+              <form className="login-form" onSubmit={login}>
+                <input
+                  aria-label="Admin password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Admin password"
+                  value={loginPassword}
+                  required
+                  onChange={(event) => setLoginPassword(event.target.value)}
+                />
+                <button className="add-button" type="submit">Log in</button>
+              </form>
+            </div>
+          )}
+
+          {isEditing && isAdmin && (
+            <div className="editor">
+              <div className="editor-heading">
+                <p>Menu editing is on. Changes are shared with all visitors.</p>
+                <button className="cancel-button" type="button" onClick={logout}>Sign out</button>
+              </div>
               <form onSubmit={saveItem}>
-                <input aria-label="Dish name" placeholder="Dish name" value={form.name} required onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                <select aria-label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <input aria-label="Dish name" placeholder="Dish name" value={form.name} required onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                <select aria-label="Category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
                   {categories.slice(1).map((name) => <option key={name}>{name}</option>)}
                 </select>
-                <input aria-label="Price" type="number" min="0" step="0.01" placeholder="Price" value={form.price} required onChange={(e) => setForm({ ...form, price: e.target.value })} />
-                <input aria-label="Description" placeholder="Description" value={form.description} required onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                <input aria-label="Image URL" type="url" placeholder="Photo URL (optional)" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+                <input aria-label="Price" type="number" min="0" step="0.01" placeholder="Price" value={form.price} required onChange={(event) => setForm({ ...form, price: event.target.value })} />
+                <input aria-label="Description" placeholder="Description" value={form.description} required onChange={(event) => setForm({ ...form, description: event.target.value })} />
+                <input aria-label="Image URL" type="url" placeholder="Photo URL (optional)" value={form.image} onChange={(event) => setForm({ ...form, image: event.target.value })} />
                 <button className="add-button" type="submit">{editingId ? 'Save changes' : 'Add dish'}</button>
                 {editingId && <button className="cancel-button" type="button" onClick={() => { setEditingId(null); setForm(blankItem) }}>Cancel</button>}
               </form>
             </div>
           )}
+
+          {error && <p className="api-error" role="alert">{error}</p>}
 
           <div className="filters" aria-label="Menu categories">
             {categories.map((name) => (
@@ -114,25 +212,29 @@ function App() {
             ))}
           </div>
 
-          <div className="menu-grid">
-            {visibleItems.map((item) => (
-              <article className="dish" key={item.id}>
-                <div className="dish-image">
-                  <img src={item.image || initialItems[0].image} alt={item.name} />
-                  <span>{item.category}</span>
-                </div>
-                <div className="dish-info">
-                  <div className="dish-title"><h3>{item.name}</h3><span>${Number(item.price).toFixed(2)}</span></div>
-                  <p>{item.description}</p>
-                  {isEditing && <div className="item-actions">
-                    <button onClick={() => editItem(item)}>Edit</button>
-                    <button onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}>Remove</button>
-                  </div>}
-                </div>
-              </article>
-            ))}
-          </div>
-          {visibleItems.length === 0 && <p className="empty">No dishes in this category yet.</p>}
+          {isLoading
+            ? <p className="empty" role="status">Loading menu...</p>
+            : (
+              <div className="menu-grid">
+                {visibleItems.map((item) => (
+                  <article className="dish" key={item.id}>
+                    <div className="dish-image">
+                      <img src={item.image || fallbackImage} alt={item.name} />
+                      <span>{item.category}</span>
+                    </div>
+                    <div className="dish-info">
+                      <div className="dish-title"><h3>{item.name}</h3><span>${Number(item.price).toFixed(2)}</span></div>
+                      <p>{item.description}</p>
+                      {isEditing && isAdmin && <div className="item-actions">
+                        <button onClick={() => editItem(item)}>Edit</button>
+                        <button onClick={() => removeItem(item.id)}>Remove</button>
+                      </div>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          {!isLoading && visibleItems.length === 0 && <p className="empty">No dishes in this category yet.</p>}
         </section>
 
         <footer className="footer">

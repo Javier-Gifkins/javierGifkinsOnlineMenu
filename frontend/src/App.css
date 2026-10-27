@@ -298,6 +298,18 @@
 .dish-title h3 { color: #eaf3ef; }
 .dish-title span { color: #75f0ca; }
 .dish-info > p { color: #98a8a2; }
+
+.api-error { margin: 0 0 18px; color: #ff9a91; font-size: 13px; }
+.editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.editor-heading p { margin-bottom: 14px; }
+.editor .login-form { display: flex; gap: 10px; }
+.login-form input { max-width: 360px; }
+
+@media (max-width: 560px) {
+  .editor-heading { align-items: flex-start; }
+  .login-form { flex-direction: column; }
+  .login-form input { max-width: none; }
+}
 .item-actions button { border-color: #354746; background: #131e1e; color: #a4f4da; }
 .item-actions button:hover { background: #1b2b29; }
 .item-actions button:last-child { color: #ff9a9a; }
