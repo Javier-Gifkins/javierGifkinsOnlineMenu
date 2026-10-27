@@ -66,16 +66,30 @@ function App() {
 
       <main id="top">
         <section className="hero">
-          <p>GOOD FOOD, GATHERED</p>
-          <h1>A little something<br />for everyone.</h1>
-          <span>Seasonal plates, made fresh and best shared around the table.</span>
-          <a href="#menu">Explore the menu ↓</a>
+          <div className="hero-copy">
+            <p className="hero-kicker"><span /> YOUR NEIGHBORHOOD TABLE</p>
+            <h1>Come hungry.<br /><em>Leave happy.</em></h1>
+            <span>Seasonal plates, good company, and one more reason to stay a little longer.</span>
+            <div className="hero-actions">
+              <a className="hero-primary" href="#menu">Explore the menu <span aria-hidden="true">↗</span></a>
+              <span className="hero-note">Fresh ingredients · Made with care</span>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=85" alt="Warmly lit dining room set for dinner" />
+            <div className="hero-stamp"><span>GOOD FOOD</span><strong>Since<br />always.</strong><span>GOOD COMPANY</span></div>
+            <div className="hero-caption"><span>01 / 04</span><span>A place to gather</span></div>
+          </div>
         </section>
 
         <section className="menu" id="menu">
-          <p className="eyebrow">MADE FRESH DAILY</p>
-          <h2>On the menu</h2>
-          <p className="intro">A few of our favourite things, made with care.</p>
+          <div className="menu-heading">
+            <div>
+              <p className="eyebrow">A LITTLE OF EVERYTHING</p>
+              <h2>Made for the<br /><em>middle of the table.</em></h2>
+            </div>
+            <p className="intro">Simple, seasonal ingredients.<br />Thoughtful plates worth sharing.</p>
+          </div>
 
           {isEditing && (
             <div className="editor">
@@ -103,7 +117,10 @@ function App() {
           <div className="menu-grid">
             {visibleItems.map((item) => (
               <article className="dish" key={item.id}>
-                <img src={item.image || initialItems[0].image} alt={item.name} />
+                <div className="dish-image">
+                  <img src={item.image || initialItems[0].image} alt={item.name} />
+                  <span>{item.category}</span>
+                </div>
                 <div className="dish-info">
                   <div className="dish-title"><h3>{item.name}</h3><span>${Number(item.price).toFixed(2)}</span></div>
                   <p>{item.description}</p>
