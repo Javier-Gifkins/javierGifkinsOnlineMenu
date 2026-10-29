@@ -1,3 +1,5 @@
+* { box-sizing: border-box; }
+
 #root { min-height: 100vh; }
 
 .app-shell {
@@ -12,21 +14,332 @@
   color: #edf4f1;
 }
 
-.theme-toggle {
-  border: 1px solid rgba(100, 109, 97, 0.2);
-  border-radius: 999px;
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.switch-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
   background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
   font-size: 11px;
-  font-weight: 700;
-  padding: 9px 14px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: 0;
 }
 
-.app-shell.dark .theme-toggle {
-  border-color: rgba(117, 240, 202, 0.5);
-  color: #dffef3;
+.switch-track {
+  position: relative;
+  display: inline-flex;
+  width: 52px;
+  height: 30px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #dfe7e0;
+  border: 2px solid rgba(32, 37, 31, 0.9);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.switch-thumb {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #1d211d;
+  transform: translateX(0);
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.switch-label {
+  min-width: 92px;
+  text-align: left;
+  color: inherit;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.switch-toggle[aria-pressed="true"] .switch-track {
+  background: #20251f;
+  border-color: #20251f;
+  box-shadow: 0 0 0 3px rgb(117 240 202 / 18%);
+}
+
+.switch-toggle[aria-pressed="true"] .switch-thumb {
+  background: #75f0ca;
+  border-color: #75f0ca;
+  transform: translateX(22px);
+}
+
+.app-shell.dark .switch-track {
+  background: #10302d;
+  border-color: rgba(117, 240, 202, 0.9);
+}
+
+.app-shell.dark .switch-toggle[aria-pressed="true"] .switch-track {
+  background: #75f0ca;
+  border-color: #75f0ca;
+}
+
+.app-shell.dark .switch-toggle[aria-pressed="true"] .switch-thumb {
+  background: #07110e;
+  border-color: #07110e;
+}
+
+.app-shell.high-contrast .switch-track {
+  border-width: 3px;
+  background: #fff7d6;
+}
+
+.app-shell.high-contrast .switch-thumb {
+  background: #ffffff;
+  border-color: #000000;
+}
+
+.app-shell.high-contrast .switch-toggle[aria-pressed="true"] .switch-track {
+  background: #000000;
+  border-color: #000000;
+}
+
+.app-shell.high-contrast .switch-toggle[aria-pressed="true"] .switch-thumb {
+  background: #ffcc00;
+  border-color: #000000;
+}
+
+.app-shell.dark.high-contrast .switch-track {
+  background: #001b17;
+  border-color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .switch-thumb {
+  background: #000000;
+  border-color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .switch-toggle[aria-pressed="true"] .switch-track {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .switch-toggle[aria-pressed="true"] .switch-thumb {
+  background: #7ef9d7;
+  border-color: #ffffff;
+}
+
+.app-shell.high-contrast {
+  background: #ffffff;
+  color: #000000;
+}
+
+.app-shell.high-contrast .header,
+.app-shell.high-contrast .menu,
+.app-shell.high-contrast .hero,
+.app-shell.high-contrast .detail-page,
+.app-shell.high-contrast .detail-card,
+.app-shell.high-contrast .dish,
+.app-shell.high-contrast .editor,
+.app-shell.high-contrast .nutrition-card,
+.app-shell.high-contrast .footer {
+  border-color: #000000;
+}
+
+.app-shell.high-contrast .hero,
+.app-shell.high-contrast .menu,
+.app-shell.high-contrast .detail-page,
+.app-shell.high-contrast .detail-card,
+.app-shell.high-contrast .dish,
+.app-shell.high-contrast .editor,
+.app-shell.high-contrast .nutrition-card {
+  background: #ffffff;
+}
+
+.app-shell.high-contrast .logo,
+.app-shell.high-contrast .footer strong,
+.app-shell.high-contrast .hero h1,
+.app-shell.high-contrast .menu-heading h2,
+.app-shell.high-contrast .dish-title h3,
+.app-shell.high-contrast .detail-content h1,
+.app-shell.high-contrast .nutrition-header h2,
+.app-shell.high-contrast .nutrition-card strong,
+.app-shell.high-contrast .hero-copy > span,
+.app-shell.high-contrast .intro,
+.app-shell.high-contrast .dish-info > p,
+.app-shell.high-contrast .detail-description,
+.app-shell.high-contrast .nutrition-card span,
+.app-shell.high-contrast .nav-link,
+.app-shell.high-contrast .hero-note,
+.app-shell.high-contrast .detail-price,
+.app-shell.high-contrast .footer,
+.app-shell.high-contrast .editor p,
+.app-shell.high-contrast .empty {
+  color: #000000;
+}
+
+.app-shell.high-contrast .theme-toggle,
+.app-shell.high-contrast .contrast-toggle,
+.app-shell.high-contrast .manage-button,
+.app-shell.high-contrast .cancel-button,
+.app-shell.high-contrast .add-button,
+.app-shell.high-contrast .item-actions button,
+.app-shell.high-contrast .filters button,
+.app-shell.high-contrast .detail-category,
+.app-shell.high-contrast .dish-image > span,
+.app-shell.high-contrast .hero-primary {
+  border: 0;
+  box-shadow: inset 0 0 0 3px #000000;
+}
+
+.app-shell.high-contrast .manage-button,
+.app-shell.high-contrast .add-button,
+.app-shell.high-contrast .hero-primary,
+.app-shell.high-contrast .detail-category,
+.app-shell.high-contrast .dish-image > span {
+  background: #000000;
+  color: #ffffff;
+}
+
+.app-shell.high-contrast .theme-toggle,
+.app-shell.high-contrast .contrast-toggle,
+.app-shell.high-contrast .cancel-button,
+.app-shell.high-contrast .item-actions button,
+.app-shell.high-contrast .filters button {
+  background: #ffffff;
+  color: #000000;
+}
+
+.app-shell.high-contrast .nav-link:hover,
+.app-shell.high-contrast .logo span,
+.app-shell.high-contrast .footer strong span,
+.app-shell.high-contrast .hero h1 em,
+.app-shell.high-contrast .menu-heading h2 em,
+.app-shell.high-contrast .detail-price,
+.app-shell.high-contrast .dish-title span,
+.app-shell.high-contrast .hero-primary span,
+.app-shell.high-contrast .detail-category {
+  color: #ffcc00;
+}
+
+.app-shell.high-contrast .theme-toggle,
+.app-shell.high-contrast .contrast-toggle {
+  background: #fff7d6;
+  color: #000000;
+  border-color: #000000;
+}
+
+.app-shell.high-contrast .hero-kicker,
+.app-shell.high-contrast .eyebrow,
+.app-shell.high-contrast .hero-stamp {
+  color: #000000;
+}
+
+.app-shell.dark.high-contrast {
+  background: #000000;
+  color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .header,
+.app-shell.dark.high-contrast .menu,
+.app-shell.dark.high-contrast .hero,
+.app-shell.dark.high-contrast .detail-page,
+.app-shell.dark.high-contrast .detail-card,
+.app-shell.dark.high-contrast .dish,
+.app-shell.dark.high-contrast .editor,
+.app-shell.dark.high-contrast .nutrition-card,
+.app-shell.dark.high-contrast .footer {
+  border-color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .hero,
+.app-shell.dark.high-contrast .menu,
+.app-shell.dark.high-contrast .detail-page,
+.app-shell.dark.high-contrast .detail-card,
+.app-shell.dark.high-contrast .dish,
+.app-shell.dark.high-contrast .editor,
+.app-shell.dark.high-contrast .nutrition-card,
+.app-shell.dark.high-contrast .footer {
+  background: #000000;
+}
+
+.app-shell.dark.high-contrast .logo,
+.app-shell.dark.high-contrast .footer strong,
+.app-shell.dark.high-contrast .hero h1,
+.app-shell.dark.high-contrast .menu-heading h2,
+.app-shell.dark.high-contrast .dish-title h3,
+.app-shell.dark.high-contrast .detail-content h1,
+.app-shell.dark.high-contrast .nutrition-header h2,
+.app-shell.dark.high-contrast .nutrition-card strong,
+.app-shell.dark.high-contrast .hero-copy > span,
+.app-shell.dark.high-contrast .intro,
+.app-shell.dark.high-contrast .dish-info > p,
+.app-shell.dark.high-contrast .detail-description,
+.app-shell.dark.high-contrast .nutrition-card span,
+.app-shell.dark.high-contrast .nav-link,
+.app-shell.dark.high-contrast .hero-note,
+.app-shell.dark.high-contrast .detail-price,
+.app-shell.dark.high-contrast .editor p,
+.app-shell.dark.high-contrast .empty,
+.app-shell.dark.high-contrast .footer {
+  color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .theme-toggle,
+.app-shell.dark.high-contrast .contrast-toggle,
+.app-shell.dark.high-contrast .manage-button,
+.app-shell.dark.high-contrast .cancel-button,
+.app-shell.dark.high-contrast .add-button,
+.app-shell.dark.high-contrast .item-actions button,
+.app-shell.dark.high-contrast .filters button,
+.app-shell.dark.high-contrast .detail-category,
+.app-shell.dark.high-contrast .dish-image > span,
+.app-shell.dark.high-contrast .hero-primary {
+  border: 0;
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.app-shell.dark.high-contrast .manage-button,
+.app-shell.dark.high-contrast .add-button,
+.app-shell.dark.high-contrast .hero-primary,
+.app-shell.dark.high-contrast .detail-category,
+.app-shell.dark.high-contrast .dish-image > span {
+  background: #ffffff;
+  color: #000000;
+}
+
+.app-shell.dark.high-contrast .theme-toggle,
+.app-shell.dark.high-contrast .contrast-toggle,
+.app-shell.dark.high-contrast .cancel-button,
+.app-shell.dark.high-contrast .item-actions button,
+.app-shell.dark.high-contrast .filters button {
+  background: #000000;
+  color: #ffffff;
+}
+
+.app-shell.dark.high-contrast .nav-link:hover,
+.app-shell.dark.high-contrast .logo span,
+.app-shell.dark.high-contrast .footer strong span,
+.app-shell.dark.high-contrast .hero h1 em,
+.app-shell.dark.high-contrast .menu-heading h2 em,
+.app-shell.dark.high-contrast .dish-title span,
+.app-shell.dark.high-contrast .detail-price,
+.app-shell.dark.high-contrast .hero-primary span {
+  color: #7ef9d7;
+}
+
+.app-shell.dark.high-contrast .theme-toggle,
+.app-shell.dark.high-contrast .contrast-toggle {
+  background: #001b17;
+  color: #ffffff;
+  border-color: #ffffff;
 }
 
 .header {

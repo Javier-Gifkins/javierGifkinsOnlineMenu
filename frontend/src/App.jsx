@@ -32,19 +32,38 @@ async function apiRequest(path, options = {}) {
   return data
 }
 
-function AppLayout({ children, isLoading, isEditing, isAdmin, setIsEditing, theme, toggleTheme }) {
+function AppLayout({ children, isLoading, isEditing, isAdmin, setIsEditing, theme, toggleTheme, highContrast, toggleHighContrast }) {
   return (
-    <div className={`app-shell ${theme}`}>
+    <div className={`app-shell ${theme} ${highContrast ? 'high-contrast' : ''}`}>
       <header className="header">
         <Link className="logo" to="/">olive <span>&</span> oak</Link>
         <Link className="nav-link" to="/">Our menu</Link>
-        <button
-          className="theme-toggle"
-          type="button"
-          onClick={toggleTheme}
-        >
-          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-        </button>
+        <div className="header-actions">
+          <button
+            className="switch-toggle theme-switch"
+            type="button"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-pressed={theme === 'dark'}
+            onClick={toggleTheme}
+          >
+            <span className="switch-track">
+              <span className="switch-thumb" />
+            </span>
+            <span className="switch-label">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
+          </button>
+          <button
+            className="switch-toggle contrast-switch"
+            type="button"
+            aria-label={`Switch to ${highContrast ? 'normal' : 'high'} contrast`}
+            aria-pressed={highContrast}
+            onClick={toggleHighContrast}
+          >
+            <span className="switch-track">
+              <span className="switch-thumb" />
+            </span>
+            <span className="switch-label">{highContrast ? 'High contrast' : 'Normal contrast'}</span>
+          </button>
+        </div>
         <button
           className="manage-button"
           disabled={isLoading}
@@ -87,11 +106,13 @@ function MenuPage({
   logout,
   theme,
   toggleTheme,
+  highContrast,
+  toggleHighContrast,
 }) {
   const visibleItems = category === 'All' ? items : items.filter((item) => item.category === category)
 
   return (
-    <AppLayout isLoading={isLoading} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme}>
+    <AppLayout isLoading={isLoading} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme} highContrast={highContrast} toggleHighContrast={toggleHighContrast}>
       <section className="hero">
         <div className="hero-copy">
           <p className="hero-kicker"><span /> YOUR NEIGHBORHOOD TABLE</p>
@@ -239,7 +260,7 @@ function MenuPage({
   )
 }
 
-function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, removeItem, theme, toggleTheme }) {
+function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, removeItem, theme, toggleTheme, highContrast, toggleHighContrast }) {
   const { id } = useParams()
   const item = items.find((entry) => entry.id === id)
   const [nutrition, setNutrition] = useState(null)
@@ -275,7 +296,7 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
 
   if (!item) {
     return (
-      <AppLayout isLoading={false} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme}>
+      <AppLayout isLoading={false} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme} highContrast={highContrast} toggleHighContrast={toggleHighContrast}>
         <section className="detail-page">
           <div className="detail-empty">
             <p>That dish is no longer on the menu.</p>
@@ -296,7 +317,7 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
   ]
 
   return (
-    <AppLayout isLoading={false} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme}>
+    <AppLayout isLoading={false} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme} highContrast={highContrast} toggleHighContrast={toggleHighContrast}>
       <section className="detail-page">
         <div className="detail-topbar">
           <Link className="back-link" to="/">Back to menu</Link>
@@ -354,10 +375,15 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('')
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem('menu-theme') || 'light')
+  const [highContrast, setHighContrast] = useState(() => localStorage.getItem('menu-high-contrast') === 'true')
 
   useEffect(() => {
     localStorage.setItem('menu-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('menu-high-contrast', String(highContrast))
+  }, [highContrast])
 
   useEffect(() => {
     let isMounted = true
@@ -461,6 +487,10 @@ function App() {
     setTheme((current) => current === 'dark' ? 'light' : 'dark')
   }
 
+  function toggleHighContrast() {
+    setHighContrast((current) => !current)
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -489,6 +519,8 @@ function App() {
               logout={logout}
               theme={theme}
               toggleTheme={toggleTheme}
+              highContrast={highContrast}
+              toggleHighContrast={toggleHighContrast}
             />
           )}
         />
@@ -505,6 +537,8 @@ function App() {
               removeItem={removeItem}
               theme={theme}
               toggleTheme={toggleTheme}
+              highContrast={highContrast}
+              toggleHighContrast={toggleHighContrast}
             />
           )}
         />
