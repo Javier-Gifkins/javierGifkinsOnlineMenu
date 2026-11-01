@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router-dom'
 import './App.css'
+import NutritionPieChart from './3dPieChart.jsx'
 
 const categories = ['All', 'Starters', 'Mains', 'Desserts', 'Drinks']
 const blankItem = { name: '', category: 'Starters', price: '', description: '', image: '' }
@@ -316,6 +317,12 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
     { label: 'Sugar', value: nutrition?.sugar ?? '?', unit: 'g' },
   ]
 
+  const nutritionChartData = [
+    { x: 'Protein', y: Number(nutrition?.protein ?? 0) || 0 },
+    { x: 'Carbs', y: Number(nutrition?.carbs ?? 0) || 0 },
+    { x: 'Fat', y: Number(nutrition?.fat ?? 0) || 0 },
+  ].filter((entry) => entry.y > 0)
+
   return (
     <AppLayout isLoading={false} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme} highContrast={highContrast} toggleHighContrast={toggleHighContrast}>
       <section className="detail-page">
@@ -349,6 +356,12 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
                   </div>
                 ))}
               </div>
+
+              {!nutritionLoading && nutritionChartData.length > 0 && (
+                <div className="nutrition-chart-panel">
+                  <NutritionPieChart data={nutritionChartData} title={`${item.name} macro split`} />
+                </div>
+              )}
             </div>
 
             {isEditing && isAdmin && (
