@@ -4,8 +4,70 @@ import './App.css'
 import NutritionPieChart from './3dPieChart.jsx'
 
 const categories = ['All', 'Starters', 'Mains', 'Desserts', 'Drinks']
-const blankItem = { name: '', category: 'Starters', price: '', description: '', image: '' }
-const fallbackImage = 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80'
+const commonAllergenLabels = ['Dairy', 'Gluten', 'Soy', 'Sesame', 'Nuts']
+const allergenOptions = [...commonAllergenLabels]
+const ingredientUnits = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'pcs']
+const blankIngredient = { name: '', quantity: '', unit: 'g' }
+const blankItem = { name: '', category: 'Starters', price: '', description: '', image: '', ingredients: [blankIngredient], allergens: [] }
+
+function normalizeIngredientItem(value) {
+  if (!value || typeof value !== 'object') return null
+
+  const name = typeof value.name === 'string' ? value.name.trim() : ''
+  const quantity = Number(value.quantity)
+  const unit = typeof value.unit === 'string' ? value.unit.trim() || 'g' : 'g'
+
+  if (!name || !Number.isFinite(quantity) || quantity <= 0) return null
+
+  return {
+    name,
+    quantity,
+    unit,
+  }
+}
+
+function normalizeIngredients(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => normalizeIngredientItem(item))
+      .filter(Boolean)
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => ({
+        name: item,
+        quantity: 1,
+        unit: 'g',
+      }))
+  }
+
+  return []
+}
+
+function formatIngredientSummary(ingredients) {
+  return normalizeIngredients(ingredients)
+    .map((ingredient) => `${ingredient.name} ${ingredient.quantity}${ingredient.unit}`)
+    .join(', ')
+}
+
+function normalizeAllergen(allergen) {
+  const value = typeof allergen === 'string' ? allergen.trim() : ''
+  if (!value) return ''
+
+  const key = value.toLowerCase()
+  if (key === 'milk' || key === 'dairy') return 'Dairy'
+  if (key === 'gluten') return 'Gluten'
+  if (key === 'soy' || key === 'soya') return 'Soy'
+  if (key === 'sesame') return 'Sesame'
+  if (key === 'peanut' || key === 'peanuts' || key === 'tree nut' || key === 'tree nuts' || key === 'nut' || key === 'nuts') return 'Nuts'
+
+  return value
+}
+const fallbackImage = 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80'
 const formFields = [
   { key: 'name', label: 'Dish name', type: 'text', placeholder: 'Dish name', required: true },
   { key: 'category', label: 'Category', type: 'select', options: categories.slice(1) },
@@ -67,7 +129,6 @@ function AppLayout({ children, isLoading, isEditing, isAdmin, setIsEditing, them
         </div>
         <button
           className="manage-button"
-          disabled={isLoading}
           onClick={() => setIsEditing(!isEditing)}
         >
           {isEditing ? (isAdmin ? 'Done' : 'Close') : 'Manage menu'}
@@ -114,6 +175,170 @@ function MenuPage({
 
   return (
     <AppLayout isLoading={isLoading} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme} highContrast={highContrast} toggleHighContrast={toggleHighContrast}>
+      {isEditing && !isAdmin && (
+        <div className="editor admin-editor admin-editor-top">
+          <p>Log in to manage the menu.</p>
+          <form className="login-form" onSubmit={login}>
+            <input
+              aria-label="Admin password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Admin password"
+              value={loginPassword}
+              required
+              onChange={(event) => setLoginPassword(event.target.value)}
+            />
+            <button className="add-button" type="submit">Log in</button>
+          </form>
+        </div>
+      )}
+
+      {isEditing && isAdmin && (
+        <div className="editor admin-editor admin-editor-top">
+          <div className="editor-heading">
+            <p>Menu editing is on. Changes are shared with all visitors.</p>
+            <button className="cancel-button" type="button" onClick={logout}>Sign out</button>
+          </div>
+          <form onSubmit={saveItem}>
+            {formFields.map(({ key, label, type, options, ...fieldProps }) => (
+              type === 'select' ? (
+                <select
+                  key={key}
+                  aria-label={label}
+                  value={form[key]}
+                  onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
+                >
+                  {options.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  key={key}
+                  aria-label={label}
+                  type={type}
+                  value={form[key]}
+                  onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
+                  {...fieldProps}
+                />
+              )
+            ))}
+
+            <div className="ingredient-builder">
+              <div className="ingredient-builder-header">
+                <span>Ingredients with quantity</span>
+                <button
+                  type="button"
+                  className="mini-button"
+                  onClick={() => setForm((current) => ({
+                    ...current,
+                    ingredients: [...(current.ingredients || []), { ...blankIngredient }],
+                  }))}
+                >
+                  + Add ingredient
+                </button>
+              </div>
+
+              {(form.ingredients || []).map((ingredient, index) => (
+                <div key={`ingredient-row-${index}`} className="ingredient-row">
+                  <input
+                    aria-label={`Ingredient name ${index + 1}`}
+                    type="text"
+                    value={ingredient.name || ''}
+                    placeholder="Ingredient"
+                    onChange={(event) => {
+                      setForm((current) => {
+                        const nextIngredients = [...(current.ingredients || [])]
+                        nextIngredients[index] = { ...nextIngredients[index], name: event.target.value }
+                        return { ...current, ingredients: nextIngredients }
+                      })
+                    }}
+                  />
+                  <input
+                    aria-label={`Ingredient quantity ${index + 1}`}
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={ingredient.quantity || ''}
+                    placeholder="Qty"
+                    onChange={(event) => {
+                      setForm((current) => {
+                        const nextIngredients = [...(current.ingredients || [])]
+                        nextIngredients[index] = { ...nextIngredients[index], quantity: event.target.value }
+                        return { ...current, ingredients: nextIngredients }
+                      })
+                    }}
+                  />
+                  <select
+                    aria-label={`Ingredient unit ${index + 1}`}
+                    value={ingredient.unit || 'g'}
+                    onChange={(event) => {
+                      setForm((current) => {
+                        const nextIngredients = [...(current.ingredients || [])]
+                        nextIngredients[index] = { ...nextIngredients[index], unit: event.target.value }
+                        return { ...current, ingredients: nextIngredients }
+                      })
+                    }}
+                  >
+                    {ingredientUnits.map((unit) => (
+                      <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="mini-button danger"
+                    onClick={() => {
+                      setForm((current) => {
+                        const nextIngredients = (current.ingredients || []).filter((_, ingredientIndex) => ingredientIndex !== index)
+                        return { ...current, ingredients: nextIngredients.length ? nextIngredients : [{ ...blankIngredient }] }
+                      })
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="allergen-picker">
+              <span>Allergens</span>
+              <div className="allergen-options">
+                {allergenOptions.map((allergen) => (
+                  <label key={allergen} className="allergen-option">
+                    <input
+                      type="checkbox"
+                      checked={Array.isArray(form.allergens) && form.allergens.includes(allergen)}
+                      onChange={(event) => {
+                        const nextAllergens = event.target.checked
+                          ? [...(form.allergens || []), allergen]
+                          : (form.allergens || []).filter((item) => item !== allergen)
+
+                        setForm((current) => ({ ...current, allergens: nextAllergens }))
+                      }}
+                    />
+                    <span>{allergen}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <button className="add-button" type="submit">{editingId ? 'Save changes' : 'Add dish'}</button>
+            {editingId && (
+              <button
+                className="cancel-button"
+                type="button"
+                onClick={() => {
+                  setEditingId(null)
+                  setForm(blankItem)
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </form>
+        </div>
+      )}
+
       <section className="hero">
         <div className="hero-copy">
           <p className="hero-kicker"><span /> YOUR NEIGHBORHOOD TABLE</p>
@@ -148,71 +373,6 @@ function MenuPage({
           <p className="intro">Simple, seasonal ingredients.<br />Thoughtful plates worth sharing.</p>
         </div>
 
-        {isEditing && !isAdmin && (
-          <div className="editor">
-            <p>Log in to manage the menu.</p>
-            <form className="login-form" onSubmit={login}>
-              <input
-                aria-label="Admin password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Admin password"
-                value={loginPassword}
-                required
-                onChange={(event) => setLoginPassword(event.target.value)}
-              />
-              <button className="add-button" type="submit">Log in</button>
-            </form>
-          </div>
-        )}
-
-        {isEditing && isAdmin && (
-          <div className="editor">
-            <div className="editor-heading">
-              <p>Menu editing is on. Changes are shared with all visitors.</p>
-              <button className="cancel-button" type="button" onClick={logout}>Sign out</button>
-            </div>
-            <form onSubmit={saveItem}>
-              {formFields.map(({ key, label, type, options, ...fieldProps }) => (
-                type === 'select' ? (
-                  <select
-                    key={key}
-                    aria-label={label}
-                    value={form[key]}
-                    onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
-                  >
-                    {options.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    key={key}
-                    aria-label={label}
-                    type={type}
-                    value={form[key]}
-                    onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
-                    {...fieldProps}
-                  />
-                )
-              ))}
-              <button className="add-button" type="submit">{editingId ? 'Save changes' : 'Add dish'}</button>
-              {editingId && (
-                <button
-                  className="cancel-button"
-                  type="button"
-                  onClick={() => {
-                    setEditingId(null)
-                    setForm(blankItem)
-                  }}
-                >
-                  Cancel
-                </button>
-              )}
-            </form>
-          </div>
-        )}
-
         {error && <p className="api-error" role="alert">{error}</p>}
 
         <div className="filters" aria-label="Menu categories">
@@ -231,27 +391,41 @@ function MenuPage({
           <p className="empty" role="status">Loading menu...</p>
         ) : (
           <div className="menu-grid">
-            {visibleItems.map((item) => (
-              <Link className="dish dish-link" key={item.id} to={`/menu/${encodeURIComponent(item.id)}`}>
-                <div className="dish-image">
-                  <img src={item.image || fallbackImage} alt={item.name} />
-                  <span>{item.category}</span>
-                </div>
-                <div className="dish-info">
-                  <div className="dish-title">
-                    <h3>{item.name}</h3>
-                    <span>${Number(item.price).toFixed(2)}</span>
+            {visibleItems.map((item) => {
+              const itemAllergens = (Array.isArray(item.allergens) ? item.allergens : []).map(normalizeAllergen).filter(Boolean)
+              const commonItemAllergens = itemAllergens.filter((allergen) => commonAllergenLabels.includes(allergen))
+              const ingredientList = normalizeIngredients(item.ingredients)
+
+              return (
+                <Link className="dish dish-link" key={item.id} to={`/menu/${encodeURIComponent(item.id)}`}>
+                  <div className="dish-image">
+                    <img src={item.image || fallbackImage} alt={item.name} />
+                    <span>{item.category}</span>
                   </div>
-                  <p>{item.description}</p>
-                  {isEditing && isAdmin && (
-                    <div className="item-actions" onClick={(event) => event.preventDefault()}>
-                      <button type="button" onClick={() => editItem(item)}>Edit</button>
-                      <button type="button" onClick={() => removeItem(item.id)}>Remove</button>
+                  <div className="dish-info">
+                    <div className="dish-title">
+                      <h3>{item.name}</h3>
+                      <span>${Number(item.price).toFixed(2)}</span>
                     </div>
-                  )}
-                </div>
-              </Link>
-            ))}
+                    <p>{item.description}</p>
+                    {ingredientList.length > 0 && (
+                      <div className="dish-ingredients">Ingredients: {formatIngredientSummary(ingredientList)}</div>
+                    )}
+                    {commonItemAllergens.length > 0 && (
+                      <div className="dish-allergen-banner">
+                        Contains allergens: {commonItemAllergens.join(', ')}
+                      </div>
+                    )}
+                    {isEditing && isAdmin && (
+                      <div className="item-actions" onClick={(event) => event.preventDefault()}>
+                        <button type="button" onClick={() => editItem(item)}>Edit</button>
+                        <button type="button" onClick={() => removeItem(item.id)}>Remove</button>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
 
@@ -308,20 +482,30 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
     )
   }
 
+  const formatValue = (value) => {
+    if (value === null || value === undefined || value === '?') return '?'
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return '?'
+    return Number(numericValue.toFixed(2))
+  }
+
   const nutritionRows = [
-    { label: 'Calories', value: nutrition?.calories ?? '?', unit: 'kcal' },
-    { label: 'Protein', value: nutrition?.protein ?? '?', unit: 'g' },
-    { label: 'Carbs', value: nutrition?.carbs ?? '?', unit: 'g' },
-    { label: 'Fat', value: nutrition?.fat ?? '?', unit: 'g' },
-    { label: 'Fiber', value: nutrition?.fiber ?? '?', unit: 'g' },
-    { label: 'Sugar', value: nutrition?.sugar ?? '?', unit: 'g' },
+    { label: 'Calories', value: formatValue(nutrition?.calories), unit: 'kcal' },
+    { label: 'Protein', value: formatValue(nutrition?.protein), unit: 'g' },
+    { label: 'Carbs', value: formatValue(nutrition?.carbs), unit: 'g' },
+    { label: 'Fat', value: formatValue(nutrition?.fat), unit: 'g' },
+    { label: 'Fiber', value: formatValue(nutrition?.fiber), unit: 'g' },
+    { label: 'Sugar', value: formatValue(nutrition?.sugar), unit: 'g' },
   ]
 
+  const allergens = (Array.isArray(item.allergens) ? item.allergens : []).map(normalizeAllergen).filter(Boolean)
+  const commonAllergens = allergens.filter((allergen) => commonAllergenLabels.includes(allergen))
+  const ingredientList = normalizeIngredients(item.ingredients)
   const nutritionChartData = Object.entries(nutrition ?? {})
-    .filter(([key, value]) => ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar'].includes(key) && Number(value) > 0)
+    .filter(([key, value]) => ['protein', 'carbs', 'fat', 'fiber', 'sugar'].includes(key) && Number(value) > 0)
     .map(([key, value]) => ({
       x: key.charAt(0).toUpperCase() + key.slice(1),
-      y: Number(value),
+      y: Number(Number(value).toFixed(2)),
     }))
 
   return (
@@ -342,6 +526,33 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
             <h1>{item.name}</h1>
             <p className="detail-price">${Number(item.price).toFixed(2)}</p>
             <p className="detail-description">{item.description}</p>
+
+            {ingredientList.length > 0 && (
+              <div className="ingredient-panel">
+                <h3>Ingredients</h3>
+                <div className="ingredient-list">
+                  {ingredientList.map((ingredient) => (
+                    <span key={`${ingredient.name}-${ingredient.quantity}-${ingredient.unit}`} className="ingredient-pill">
+                      {ingredient.name} · {ingredient.quantity}{ingredient.unit}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="allergen-panel">
+              <h3>Allergens</h3>
+              {commonAllergens.length > 0 && (
+                <div className="allergen-warning">
+                  This dish contains common allergens: {commonAllergens.join(', ')}.
+                </div>
+              )}
+              <div className="allergen-list">
+                {allergens.length > 0 ? allergens.map((allergen) => (
+                  <span key={allergen} className="allergen-pill">{allergen}</span>
+                )) : <span className="allergen-empty">No major allergens flagged.</span>}
+              </div>
+            </div>
 
             <div className="nutrition-panel">
               <div className="nutrition-header">
@@ -422,13 +633,27 @@ function App() {
 
   function editItem(item) {
     setEditingId(item.id)
-    setForm({ ...item, price: String(item.price) })
+    setForm({
+      ...item,
+      price: String(item.price),
+      ingredients: normalizeIngredients(item.ingredients).length
+        ? normalizeIngredients(item.ingredients)
+        : [{ ...blankIngredient }],
+      allergens: Array.isArray(item.allergens)
+        ? item.allergens.map(normalizeAllergen).filter(Boolean)
+        : [],
+    })
   }
 
   async function saveItem(event) {
     event.preventDefault()
     setError('')
-    const item = { ...form, price: Number(form.price) }
+    const item = {
+      ...form,
+      price: Number(form.price),
+      ingredients: normalizeIngredients(form.ingredients),
+      allergens: Array.isArray(form.allergens) ? form.allergens : [],
+    }
 
     try {
       const savedItem = await apiRequest(

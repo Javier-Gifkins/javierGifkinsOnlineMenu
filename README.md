@@ -3,6 +3,9 @@
 The menu is stored in MongoDB and served by the Express API. Menu changes require
 an admin password; the browser receives an HTTP-only session cookie.
 
+## Admin Password for Testing 
+MenuAdmin2026! 
+
 ## Local setup
 
 1. In MongoDB Atlas, create a database user and allow the development machine's IP
@@ -35,3 +38,7 @@ menu items. Subsequent menu additions, edits, and removals are stored in the
 For production, set the same environment variables on the backend host, serve the
 frontend over HTTPS, and configure the production web server to proxy `/api` to
 the backend. The admin session cookie is marked `Secure` in production.
+
+
+## Nutrition Data Source:
+U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019. fdc.nal.usda.gov.

@@ -520,16 +520,71 @@
 .dish-title h3 { margin: 0; color: #242920; font: 600 16px Georgia, "Times New Roman", serif; line-height: 1.4; }
 .dish-title span { flex-shrink: 0; color: #738441; font-size: 12px; font-weight: 800; }
 .dish-info > p { min-height: 40px; margin: 9px 0 0; color: #777b71; font-size: 11px; line-height: 1.7; }
+.dish-ingredients {
+  margin-top: 10px;
+  color: #51614d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 .item-actions { display: flex; gap: 8px; margin-top: 14px; }
 .item-actions button { padding: 7px 11px; border: 1px solid #e4e6df; border-radius: 3px; background: white; color: #385440; cursor: pointer; font-size: 11px; font-weight: 600; }
 .item-actions button:hover { background: #f4f6f1; }
 .item-actions button:last-child { color: #9b5145; }
 
+.admin-editor-top {
+  max-width: 1280px;
+  margin: 10px auto 26px;
+  padding: 20px 42px;
+}
+
+.admin-editor { margin-top: -8px; margin-bottom: 25px; }
 .editor { margin-bottom: 25px; padding: 20px; border: 1px solid #e1e6dc; background: #f5f7f1; }
 .editor p { margin: 0 0 14px; color: #596658; font-size: 12px; }
 .editor form { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
 .editor input, .editor select { min-width: 0; padding: 11px 12px; border: 1px solid #dfe2d9; border-radius: 3px; background: white; font: inherit; font-size: 12px; }
 .editor input:focus, .editor select:focus { border-color: #8a9c79; }
+
+.allergen-picker {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.allergen-picker > span {
+  color: #304638;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.allergen-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allergen-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid #dfe2d9;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #304638;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.allergen-option input {
+  width: 14px;
+  height: 14px;
+  accent-color: #7e9147;
+}
 .add-button { background: #304b3a; color: white; }
 .add-button:hover { background: #243d2e; }
 .empty { padding: 40px 0; color: #788078; text-align: center; }
@@ -599,6 +654,97 @@
 .detail-price { margin: 12px 0 0; color: #738441; font-size: 24px; font-weight: 800; }
 .detail-description { margin: 18px 0 0; color: #5f665f; font-size: 15px; line-height: 1.8; }
 .detail-eyebrow { margin-top: 6px; }
+
+.ingredient-panel {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e3e9df;
+}
+
+.ingredient-panel h3 {
+  margin: 0 0 10px;
+  color: #20251f;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.ingredient-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ingredient-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f4e7;
+  color: #304638;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.allergen-panel {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e3e9df;
+}
+
+.allergen-panel h3 {
+  margin: 0 0 10px;
+  color: #20251f;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.dish-allergen-banner {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid #f0c766;
+  border-radius: 6px;
+  background: #fff3d6;
+  color: #6b4d00;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.allergen-warning {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #f0c766;
+  border-radius: 8px;
+  background: #fff3d6;
+  color: #6b4d00;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.allergen-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allergen-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f4e7;
+  color: #304638;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.allergen-empty {
+  color: #586155;
+  font-size: 13px;
+}
 
 .nutrition-panel {
   margin-top: 28px;

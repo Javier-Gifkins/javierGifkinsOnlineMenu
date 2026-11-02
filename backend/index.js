@@ -7,13 +7,28 @@ import { rateLimit } from 'express-rate-limit'
 import { MongoClient } from 'mongodb'
 
 const categories = new Set(['Starters', 'Mains', 'Desserts', 'Drinks'])
+const allergenLabels = ['Dairy', 'Gluten', 'Soy', 'Sesame', 'Nuts', 'Eggs', 'Shellfish', 'Fish']
+const allergenAliases = {
+  dairy: 'Dairy',
+  milk: 'Dairy',
+  gluten: 'Gluten',
+  soy: 'Soy',
+  soya: 'Soy',
+  sesame: 'Sesame',
+  nuts: 'Nuts',
+  peanut: 'Nuts',
+  peanuts: 'Nuts',
+  'tree nut': 'Nuts',
+  'tree nuts': 'Nuts',
+}
+
 const defaultMenu = [
-  { name: 'Burrata & tomatoes', category: 'Starters', price: 16, description: 'Creamy burrata, ripe tomatoes, basil oil, grilled sourdough.', image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80' },
-  { name: 'Roasted carrots', category: 'Starters', price: 13, description: 'Honey-roasted carrots, whipped feta, dukkah, orange zest.', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80' },
-  { name: 'Brown butter gnocchi', category: 'Mains', price: 24, description: 'Potato gnocchi, sage brown butter, toasted hazelnuts, parmesan.', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80' },
-  { name: 'Crispy-skin salmon', category: 'Mains', price: 29, description: 'Pan-seared salmon, crushed potatoes, greens, lemon caper butter.', image: 'https://images.unsplash.com/photo-1466220838312-3e9b9c9b9b81?auto=format&fit=crop&w=800&q=80' },
-  { name: 'Warm apple tart', category: 'Desserts', price: 12, description: 'Buttery pastry, orchard apples, vanilla ice cream, salted caramel.', image: 'https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?auto=format&fit=crop&w=800&q=80' },
-  { name: 'Garden lemonade', category: 'Drinks', price: 7, description: 'Fresh lemon, rosemary syrup, sparkling water.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765edfd7?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Burrata & tomatoes', category: 'Starters', price: 16, description: 'Creamy burrata, ripe tomatoes, basil oil, grilled sourdough.', image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80', allergens: ['Dairy', 'Gluten'] },
+  { name: 'Roasted carrots', category: 'Starters', price: 13, description: 'Honey-roasted carrots, whipped feta, dukkah, orange zest.', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80', allergens: ['Dairy', 'Sesame'] },
+  { name: 'Brown butter gnocchi', category: 'Mains', price: 24, description: 'Potato gnocchi, sage brown butter, toasted hazelnuts, parmesan.', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80', allergens: ['Gluten', 'Dairy', 'Nuts'] },
+  { name: 'Crispy-skin salmon', category: 'Mains', price: 29, description: 'Pan-seared salmon, crushed potatoes, greens, lemon caper butter.', image: 'https://images.unsplash.com/photo-1466220838312-3e9b9c9b9b81?auto=format&fit=crop&w=800&q=80', allergens: [] },
+  { name: 'Warm apple tart', category: 'Desserts', price: 12, description: 'Buttery pastry, orchard apples, vanilla ice cream, salted caramel.', image: 'https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?auto=format&fit=crop&w=800&q=80', allergens: ['Gluten', 'Dairy'] },
+  { name: 'Garden lemonade', category: 'Drinks', price: 7, description: 'Fresh lemon, rosemary syrup, sparkling water.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765edfd7?auto=format&fit=crop&w=800&q=80', allergens: [] },
 ]
 
 function requiredSetting(name, minimumLength = 1) {
@@ -24,15 +39,67 @@ function requiredSetting(name, minimumLength = 1) {
   return value
 }
 
+function normalizeAllergenLabel(value) {
+  if (typeof value !== 'string') return ''
+
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  const directMatch = allergenAliases[trimmed.toLowerCase()]
+  if (directMatch) return directMatch
+
+  const normalized = trimmed.toLowerCase()
+  if (normalized === 'milk' || normalized === 'dairy') return 'Dairy'
+  if (normalized === 'gluten') return 'Gluten'
+  if (normalized === 'soy' || normalized === 'soya') return 'Soy'
+  if (normalized === 'sesame') return 'Sesame'
+  if (normalized === 'peanut' || normalized === 'peanuts' || normalized === 'tree nut' || normalized === 'tree nuts' || normalized === 'nut' || normalized === 'nuts') return 'Nuts'
+
+  return trimmed
+}
+
+function normalizeIngredientEntry(value) {
+  if (!value || typeof value !== 'object') return null
+
+  const name = typeof value.name === 'string' ? value.name.trim() : ''
+  const quantity = Number(value.quantity)
+  const unit = typeof value.unit === 'string' ? value.unit.trim() || 'g' : 'g'
+
+  if (!name || !Number.isFinite(quantity) || quantity <= 0) return null
+
+  return {
+    name,
+    quantity,
+    unit,
+  }
+}
+
 function validateMenuItem(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { error: 'A menu item object is required.' }
   }
 
-  const { name, category, price, description, image = '' } = body
+  const { name, category, price, description, image = '', ingredients: itemIngredients = [], allergens: itemAllergens = [] } = body
   const numericPrice = typeof price === 'number' || (typeof price === 'string' && price.trim())
     ? Number(price)
     : Number.NaN
+  const sanitizedIngredients = Array.isArray(itemIngredients)
+    ? itemIngredients
+      .map(normalizeIngredientEntry)
+      .filter(Boolean)
+    : typeof itemIngredients === 'string'
+      ? itemIngredients
+        .split(',')
+        .map((ingredient) => ingredient.trim())
+        .filter(Boolean)
+        .map((ingredient) => ({ name: ingredient, quantity: 1, unit: 'g' }))
+      : []
+  const sanitizedAllergens = Array.isArray(itemAllergens)
+    ? [...new Set(itemAllergens
+      .map(normalizeAllergenLabel)
+      .filter((allergen) => allergen && allergenLabels.includes(allergen)))]
+    : []
+
   if (typeof name !== 'string' || !name.trim()) return { error: 'A dish name is required.' }
   if (!categories.has(category)) return { error: 'Choose a valid menu category.' }
   if (!Number.isFinite(numericPrice) || numericPrice < 0) return { error: 'Price must be a non-negative number.' }
@@ -46,6 +113,8 @@ function validateMenuItem(body) {
       price: numericPrice,
       description: description.trim(),
       image: image.trim(),
+      ingredients: sanitizedIngredients,
+      allergens: sanitizedAllergens,
     },
   }
 }
@@ -54,8 +123,186 @@ const mongoUri = requiredSetting('MONGODB_URI')
 const adminPassword = requiredSetting('ADMIN_PASSWORD', 12)
 const sessionSecret = requiredSetting('SESSION_SECRET', 32)
 const port = Number(process.env.PORT) || 3001
+const fdcApiKey = process.env.FDC_API_KEY || ''
+const fdcBaseUrl = process.env.FDC_BASE_URL || 'https://api.nal.usda.gov/fdc/v1'
 const client = new MongoClient(mongoUri)
 const app = express()
+
+const nutritionKeyMap = {
+  Energy: 'calories',
+  Protein: 'protein',
+  'Total lipid (fat)': 'fat',
+  'Carbohydrate, by difference': 'carbs',
+  'Fiber, total dietary': 'fiber',
+  'Sugars, total including NLEA': 'sugar',
+}
+
+function estimateNutrition(itemName = '') {
+  const name = String(itemName).toLowerCase()
+
+  if (name.includes('salmon')) return { calories: 420, protein: 34, carbs: 12, fat: 19, fiber: 2, sugar: 3 }
+  if (name.includes('gnocchi') || name.includes('pasta')) return { calories: 560, protein: 18, carbs: 66, fat: 23, fiber: 5, sugar: 8 }
+  if (name.includes('carrot')) return { calories: 190, protein: 7, carbs: 28, fat: 8, fiber: 6, sugar: 11 }
+  if (name.includes('burrata') || name.includes('tomato') || name.includes('pizza')) return { calories: 460, protein: 17, carbs: 42, fat: 21, fiber: 5, sugar: 9 }
+  if (name.includes('apple') || name.includes('tart')) return { calories: 340, protein: 5, carbs: 47, fat: 14, fiber: 4, sugar: 28 }
+  if (name.includes('lemon') || name.includes('drink') || name.includes('lemonade')) return { calories: 120, protein: 1, carbs: 29, fat: 0, fiber: 1, sugar: 24 }
+
+  return { calories: 320, protein: 16, carbs: 27, fat: 14, fiber: 4, sugar: 7 }
+}
+
+function normalizeNutrition(food) {
+  if (!food?.foodNutrients) return {}
+
+  const nutrients = {}
+  for (const entry of food.foodNutrients) {
+    const nutrientName = entry?.nutrientName ?? entry?.nutrient?.name ?? ''
+    const key = nutritionKeyMap[nutrientName] ?? nutritionKeyMap[nutrientName.trim()]
+    if (!key) continue
+
+    const value = Number(entry?.value ?? entry?.amount)
+    if (Number.isFinite(value)) nutrients[key] = value
+  }
+
+  return nutrients
+}
+
+async function fetchJson(url, headers = {}) {
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      ...headers,
+    },
+  })
+
+  const body = await response.text()
+  if (!response.ok) {
+    throw new Error(`FDC API error (${response.status}): ${body.slice(0, 200)}`)
+  }
+
+  return body ? JSON.parse(body) : null
+}
+
+function unitToGrams(unit, quantity) {
+  const normalizedUnit = String(unit || 'g').trim().toLowerCase()
+  const conversionMap = {
+    g: 1,
+    gram: 1,
+    grams: 1,
+    kg: 1000,
+    kgs: 1000,
+    kilogram: 1000,
+    kilograms: 1000,
+    ml: 1,
+    milliliter: 1,
+    milliliters: 1,
+    l: 1000,
+    liter: 1000,
+    litre: 1000,
+    liters: 1000,
+    litres: 1000,
+    tsp: 5,
+    teaspoon: 5,
+    teaspoons: 5,
+    tbsp: 15,
+    tablespoon: 15,
+    tablespoons: 15,
+    cup: 240,
+    cups: 240,
+    oz: 28.35,
+    ounce: 28.35,
+    ounces: 28.35,
+    lb: 453.6,
+    lbs: 453.6,
+    pcs: 50,
+    pc: 50,
+    piece: 50,
+    pieces: 50,
+  }
+
+  const multiplier = conversionMap[normalizedUnit] ?? 1
+  return Number(quantity) * multiplier
+}
+
+function scaleNutritionByWeight(nutrition, quantity, unit) {
+  if (!nutrition || typeof nutrition !== 'object') return {}
+
+  const grams = unitToGrams(unit, quantity)
+  if (!Number.isFinite(grams) || grams <= 0) return nutrition
+
+  const scaleFactor = grams / 100
+  const scaled = {}
+  for (const [key, value] of Object.entries(nutrition)) {
+    const numberValue = Number(value)
+    if (Number.isFinite(numberValue)) scaled[key] = numberValue * scaleFactor
+  }
+
+  return scaled
+}
+
+async function lookupNutritionByName(itemName) {
+  const fallback = { itemName, match: null, nutrition: estimateNutrition(itemName) }
+
+  if (!fdcApiKey) {
+    return fallback
+  }
+
+  const searchUrl = `${fdcBaseUrl}/foods/search?query=${encodeURIComponent(itemName)}&pageSize=1`
+  const searchResult = await fetchJson(searchUrl, { 'x-api-key': fdcApiKey })
+  const food = searchResult?.foods?.[0]
+
+  if (!food) {
+    return fallback
+  }
+
+  const foodDetails = await fetchJson(`${fdcBaseUrl}/food/${food.fdcId}`, { 'x-api-key': fdcApiKey })
+  const nutrition = normalizeNutrition(foodDetails)
+
+  if (Object.keys(nutrition).length > 0) {
+    return {
+      itemName,
+      match: foodDetails?.description || food?.description || null,
+      nutrition,
+    }
+  }
+
+  return {
+    itemName,
+    match: foodDetails?.description || food?.description || null,
+    nutrition: estimateNutrition(itemName),
+  }
+}
+
+async function lookupMenuItemNutrition(item) {
+  if (Array.isArray(item?.ingredients) && item.ingredients.length > 0) {
+    const totals = {}
+
+    for (const ingredient of item.ingredients) {
+      const ingredientName = typeof ingredient?.name === 'string' ? ingredient.name.trim() : ''
+      const ingredientQuantity = Number(ingredient?.quantity)
+      const ingredientUnit = typeof ingredient?.unit === 'string' ? ingredient.unit : 'g'
+
+      if (!ingredientName || !Number.isFinite(ingredientQuantity) || ingredientQuantity <= 0) continue
+
+      const ingredientData = await lookupNutritionByName(ingredientName)
+      const ingredientNutrition = ingredientData?.nutrition ?? estimateNutrition(ingredientName)
+      const scaledNutrition = scaleNutritionByWeight(ingredientNutrition, ingredientQuantity, ingredientUnit)
+
+      for (const [key, value] of Object.entries(scaledNutrition)) {
+        totals[key] = (totals[key] ?? 0) + Number(value)
+      }
+    }
+
+    if (Object.keys(totals).length > 0) {
+      return {
+        itemName: item.name,
+        match: item.name,
+        nutrition: totals,
+      }
+    }
+  }
+
+  return lookupNutritionByName(item?.name || '')
+}
 
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)
 
@@ -140,6 +387,32 @@ app.post('/api/auth/logout', (req, res, next) => {
 
 app.get('/api/menu', async (req, res) => {
   res.json(await menuItems.find({}, { projection: { _id: 0 } }).toArray())
+})
+
+app.get('/api/nutrition', async (req, res) => {
+  const itemName = typeof req.query.name === 'string' ? req.query.name.trim() : ''
+  if (!itemName) {
+    return res.status(400).json({ error: 'A food name is required. Example: /api/nutrition?name=salmon' })
+  }
+
+  try {
+    const nutrition = await lookupNutritionByName(itemName)
+    return res.json(nutrition)
+  } catch (error) {
+    return res.status(502).json({ error: 'Could not load nutrition data from FoodData Central.', details: error.message })
+  }
+})
+
+app.get('/api/menu/:id/nutrition', async (req, res) => {
+  const item = await menuItems.findOne({ id: req.params.id }, { projection: { _id: 0 } })
+  if (!item) return res.status(404).json({ error: 'Menu item not found.' })
+
+  try {
+    const nutrition = await lookupMenuItemNutrition(item)
+    return res.json({ ...nutrition, menuItem: item })
+  } catch (error) {
+    return res.status(502).json({ error: 'Could not load nutrition data from FoodData Central.', details: error.message })
+  }
 })
 
 app.post('/api/menu', requireAdmin, async (req, res) => {
