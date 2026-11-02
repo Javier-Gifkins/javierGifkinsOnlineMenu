@@ -12,7 +12,7 @@ import {
 } from '@syncfusion/ej2-react-charts';
 import { Browser } from '@syncfusion/ej2-base';
 
-const nutritionPalette = ['#7ecf9d', '#f5d76e', '#f39b72', '#79c2ff'];
+const nutritionPalette = ['#7ecf9d', '#f5d76e', '#f39b72', '#79c2ff', '#d7a7ff', '#8ad7c8'];
 
 const NutritionPieChart = ({ data = [], title = 'Nutrition' }) => {
   const chartData = (data || [])

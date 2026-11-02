@@ -317,11 +317,12 @@ function MenuItemPage({ items, isAdmin, isEditing, setIsEditing, editItem, remov
     { label: 'Sugar', value: nutrition?.sugar ?? '?', unit: 'g' },
   ]
 
-  const nutritionChartData = [
-    { x: 'Protein', y: Number(nutrition?.protein ?? 0) || 0 },
-    { x: 'Carbs', y: Number(nutrition?.carbs ?? 0) || 0 },
-    { x: 'Fat', y: Number(nutrition?.fat ?? 0) || 0 },
-  ].filter((entry) => entry.y > 0)
+  const nutritionChartData = Object.entries(nutrition ?? {})
+    .filter(([key, value]) => ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar'].includes(key) && Number(value) > 0)
+    .map(([key, value]) => ({
+      x: key.charAt(0).toUpperCase() + key.slice(1),
+      y: Number(value),
+    }))
 
   return (
     <AppLayout isLoading={false} isEditing={isEditing} isAdmin={isAdmin} setIsEditing={setIsEditing} theme={theme} toggleTheme={toggleTheme} highContrast={highContrast} toggleHighContrast={toggleHighContrast}>
